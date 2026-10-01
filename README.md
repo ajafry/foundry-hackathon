@@ -13,6 +13,9 @@ This Bicep project deploys into an existing, clean Azure resource group:
 - A subscription inbound rule so Azure AI Search can continue reading Storage with managed identity.
 - A system-assigned Storage identity to satisfy NSP identity configuration requirements.
 - Foundry account access for the Search managed identity through `Cognitive Services OpenAI User` and `Cognitive Services User`.
+- A Log Analytics workspace with 30-day retention.
+- A workspace-based Application Insights resource with local authentication disabled.
+- A shared Foundry monitoring connection to Application Insights, exposed at both account and project scopes.
 - A project-scoped Azure AI Search connection that uses Microsoft Entra ID.
 - RBAC assignments that allow Search to read blobs and Foundry to manage/query Search.
 
@@ -23,6 +26,8 @@ The Storage account's NSP association is in `Enforced` mode. NSP rules become th
 The Storage identity is enabled for NSP intra-perimeter identity compliance. It has no role assignments because Storage does not initiate access to another service in this architecture.
 
 The Search system identity is authorized on the Foundry account for model inference and Cognitive Services access. These role assignments are scoped directly to the Foundry account.
+
+Foundry server-side tracing uses the project managed identity to publish telemetry to Application Insights. The account-level connection is shared to the project and uses `ProjectManagedIdentity`; Foundry exposes the same connection through the project connection path. The project identity has `Monitoring Metrics Publisher`, `Log Analytics Reader`, and `Privileged Monitoring Data Reader` scoped directly to the Application Insights resource.
 
 ## Structure
 
@@ -36,6 +41,7 @@ The Search system identity is authorized on the Foundry account for model infere
 |   |-- main.bicepparam
 |   `-- modules/
 |       |-- foundry.bicep
+|       |-- monitoring.bicep
 |       |-- network-security-perimeter.bicep
 |       |-- rbac.bicep
 |       |-- search.bicep

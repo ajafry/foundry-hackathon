@@ -268,3 +268,66 @@ Validation completed on 2026-09-30 UTC.
 - Foundry remains `Succeeded`, public network access remains enabled, and local authentication remains disabled.
 - Search remains `running` with local authentication disabled.
 - The Storage NSP association remains `Enforced`, `Succeeded`, and reports no provisioning issues.
+
+## 12. Foundry Monitoring Update
+
+Proposed incremental monitoring update:
+
+1. Create a Log Analytics workspace in `westus2` using the `PerGB2018` SKU and 30-day retention.
+2. Create a workspace-based Application Insights resource in `westus2`.
+3. Disable Application Insights local authentication so trace ingestion uses Microsoft Entra ID rather than an instrumentation key.
+4. Create one account-level Application Insights connection shared to `project-aurora`; Foundry exposes the shared connection through both account and project resource paths.
+5. Configure the shared connection to use the project system-assigned managed identity.
+6. Grant the Foundry project identity the following roles scoped directly to Application Insights:
+   - `Monitoring Metrics Publisher` for Entra-authenticated trace ingestion.
+   - `Log Analytics Reader` for querying telemetry.
+   - `Privileged Monitoring Data Reader` for protected generative-AI trace content.
+7. Preserve all existing Foundry, Search, Storage, model, NSP, and RBAC configuration.
+8. Validate with Bicep build, ARM validation, policy review, and a deletion-safe what-if.
+9. Redeploy incrementally and verify:
+   - The workspace and workspace-based Application Insights resource are healthy.
+   - The shared Foundry monitoring connection targets the new Application Insights resource and is visible from the project.
+   - The connection uses project managed identity authentication.
+   - All three monitoring role assignments exist for the project identity.
+
+### Foundry monitoring validation
+
+- [x] 1. Core Validation (CLI, auth, build, validate, what-if)
+- [x] 2. Linting
+- [x] 3. Azure Policy Validation
+
+### Foundry monitoring validation proof
+
+Validation completed on 2026-09-30 UTC.
+
+- Azure CLI authentication, Bicep compilation, ARM validation, and what-if: PASS.
+- Resource-ID-only what-if reports no deletions.
+- Planned creates:
+  - Log Analytics workspace `aurora-law-y3gh6n`.
+  - Application Insights component `aurora-appi-y3gh6n`.
+  - Foundry account-level Application Insights connection shared to the project.
+- The three new Application Insights role assignments appear as expected `Unsupported` what-if entries because their deterministic IDs include the project principal ID resolved during deployment.
+- Bicep build, parameter build, and lint: PASS.
+- Applicable Azure Policy assignments: none.
+- Static RBAC verification confirms `Monitoring Metrics Publisher`, `Log Analytics Reader`, and `Privileged Monitoring Data Reader` are scoped directly to Application Insights for the Foundry project identity.
+- Existing `BCP081` warnings remain limited to missing local type definitions for the accepted NSP `2025-09-01` API.
+
+### Foundry monitoring deployment result
+
+- Deployment `foundry-hackathon-monitoring-20260930-200303` completed successfully on 2026-10-01 UTC.
+- Log Analytics workspace `aurora-law-y3gh6n` is `Succeeded` in `westus2`, uses `PerGB2018`, and retains data for 30 days.
+- Application Insights `aurora-appi-y3gh6n` is `Succeeded`, workspace-based, uses `LogAnalytics` ingestion, and has local authentication disabled.
+- Foundry connection `appinsights-y3gh6n`:
+  - Targets the Application Insights resource.
+  - Uses `ProjectManagedIdentity`.
+  - Sets `useWorkspaceManagedIdentity: true`.
+  - Is shared to all projects and is visible through the `project-aurora` project connection path.
+- Foundry project identity `41d7af19-8406-49c2-8b19-cc566a5869ed` has the following roles scoped directly to Application Insights:
+  - `Monitoring Metrics Publisher`
+  - `Log Analytics Reader`
+  - `Privileged Monitoring Data Reader`
+- Existing Foundry, requested model deployments, Search, Storage, and NSP-protected networking remain healthy.
+- Deployment recovery corrected two service-runtime requirements that ARM validation did not detect:
+  - App Insights connections require `authType: ProjectManagedIdentity`.
+  - The connection requires `ApplicationInsightsConnectionString` metadata even when Application Insights local authentication is disabled.
+- Foundry represents the account-level shared connection at the project path; declaring a second project resource attempts to update the same backend connection and is rejected. The final Bicep therefore manages one shared connection and outputs both resource paths.

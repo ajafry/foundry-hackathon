@@ -73,7 +73,10 @@ var foundryAccountName = '${normalizedPrefix}-foundry-${resourceSuffix}'
 var searchServiceName = '${normalizedPrefix}-search-${resourceSuffix}'
 var storageAccountName = take('${storagePrefix}st${resourceSuffix}', 24)
 var searchConnectionName = 'search-${resourceSuffix}'
+var applicationInsightsConnectionName = 'appinsights-${resourceSuffix}'
 var networkSecurityPerimeterName = '${normalizedPrefix}-nsp-${resourceSuffix}'
+var logAnalyticsWorkspaceName = '${normalizedPrefix}-law-${resourceSuffix}'
+var applicationInsightsName = '${normalizedPrefix}-appi-${resourceSuffix}'
 
 module storage './modules/storage.bicep' = {
   name: 'storage-${resourceSuffix}'
@@ -96,6 +99,17 @@ module search './modules/search.bicep' = {
   }
 }
 
+module monitoring './modules/monitoring.bicep' = {
+  name: 'monitoring-${resourceSuffix}'
+  params: {
+    location: location
+    logAnalyticsWorkspaceName: logAnalyticsWorkspaceName
+    applicationInsightsName: applicationInsightsName
+    retentionInDays: 30
+    tags: tags
+  }
+}
+
 module foundry './modules/foundry.bicep' = {
   name: 'foundry-${resourceSuffix}'
   params: {
@@ -103,6 +117,9 @@ module foundry './modules/foundry.bicep' = {
     location: foundryLocation
     projectName: projectName
     searchConnectionName: searchConnectionName
+    applicationInsightsConnectionName: applicationInsightsConnectionName
+    applicationInsightsId: monitoring.outputs.applicationInsightsId
+    applicationInsightsName: monitoring.outputs.applicationInsightsName
     searchServiceId: search.outputs.searchServiceId
     searchServiceEndpoint: search.outputs.searchServiceEndpoint
     searchServiceLocation: search.outputs.searchServiceLocation
@@ -142,6 +159,8 @@ module rbac './modules/rbac.bicep' = {
     foundryAccountId: foundry.outputs.accountId
     foundryAccountPrincipalId: foundry.outputs.accountPrincipalId
     foundryProjectPrincipalId: foundry.outputs.projectPrincipalId
+    applicationInsightsName: monitoring.outputs.applicationInsightsName
+    applicationInsightsId: monitoring.outputs.applicationInsightsId
   }
 }
 
@@ -153,6 +172,12 @@ output embeddingDeploymentName string = foundry.outputs.embeddingDeploymentName
 output searchServiceName string = search.outputs.searchServiceName
 output searchServiceEndpoint string = search.outputs.searchServiceEndpoint
 output searchConnectionId string = foundry.outputs.searchConnectionId
+output logAnalyticsWorkspaceName string = monitoring.outputs.logAnalyticsWorkspaceName
+output logAnalyticsWorkspaceId string = monitoring.outputs.logAnalyticsWorkspaceId
+output applicationInsightsName string = monitoring.outputs.applicationInsightsName
+output applicationInsightsId string = monitoring.outputs.applicationInsightsId
+output accountApplicationInsightsConnectionId string = foundry.outputs.accountApplicationInsightsConnectionId
+output projectApplicationInsightsConnectionId string = foundry.outputs.projectApplicationInsightsConnectionId
 output storageAccountName string = storage.outputs.storageAccountName
 output blobContainerName string = storage.outputs.containerName
 output blobContainerUrl string = storage.outputs.containerUrl

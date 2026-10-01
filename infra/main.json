@@ -1,0 +1,1153 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.46.1.21595",
+      "templateHash": "8031909534737341082"
+    }
+  },
+  "parameters": {
+    "namingPrefix": {
+      "type": "string",
+      "defaultValue": "aurora",
+      "minLength": 2,
+      "maxLength": 16,
+      "metadata": {
+        "description": "Short workload prefix used to derive resource names. Use lowercase letters, numbers, and hyphens."
+      }
+    },
+    "resourceSuffix": {
+      "type": "string",
+      "defaultValue": "[substring(uniqueString(subscription().subscriptionId, resourceGroup().id), 0, 6)]",
+      "minLength": 3,
+      "maxLength": 12,
+      "metadata": {
+        "description": "Optional deterministic suffix. Defaults to a value unique to the subscription and resource group."
+      }
+    },
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]",
+      "metadata": {
+        "description": "Location for the Foundry account, project, Search service, and Storage account."
+      }
+    },
+    "foundryLocation": {
+      "type": "string",
+      "defaultValue": "[parameters('location')]",
+      "metadata": {
+        "description": "Location for the Foundry account, project, and model deployments. Defaults to the main resource location."
+      }
+    },
+    "projectName": {
+      "type": "string",
+      "defaultValue": "project-aurora",
+      "minLength": 2,
+      "maxLength": 64,
+      "metadata": {
+        "description": "Name of the default Microsoft Foundry project."
+      }
+    },
+    "searchSkuName": {
+      "type": "string",
+      "defaultValue": "basic",
+      "allowedValues": [
+        "basic",
+        "standard",
+        "standard2",
+        "standard3"
+      ],
+      "metadata": {
+        "description": "Azure AI Search SKU."
+      }
+    },
+    "semanticSearch": {
+      "type": "string",
+      "defaultValue": "free",
+      "allowedValues": [
+        "disabled",
+        "free",
+        "standard"
+      ],
+      "metadata": {
+        "description": "Semantic Search billing plan."
+      }
+    },
+    "gpt5MiniModelVersion": {
+      "type": "string",
+      "defaultValue": "2025-08-07",
+      "metadata": {
+        "description": "Model version for the gpt-5-mini deployment."
+      }
+    },
+    "gpt5MiniDeploymentSku": {
+      "type": "string",
+      "defaultValue": "GlobalStandard",
+      "metadata": {
+        "description": "SKU for the gpt-5-mini deployment."
+      }
+    },
+    "gpt5MiniCapacity": {
+      "type": "int",
+      "defaultValue": 10,
+      "minValue": 1,
+      "metadata": {
+        "description": "Capacity for the gpt-5-mini deployment, expressed in thousands of tokens per minute."
+      }
+    },
+    "embeddingModelVersion": {
+      "type": "string",
+      "defaultValue": "1",
+      "metadata": {
+        "description": "Model version for the text-embedding-3-large deployment."
+      }
+    },
+    "embeddingDeploymentSku": {
+      "type": "string",
+      "defaultValue": "GlobalStandard",
+      "metadata": {
+        "description": "SKU for the text-embedding-3-large deployment."
+      }
+    },
+    "embeddingCapacity": {
+      "type": "int",
+      "defaultValue": 10,
+      "minValue": 1,
+      "metadata": {
+        "description": "Capacity for the text-embedding-3-large deployment, expressed in thousands of tokens per minute."
+      }
+    },
+    "tags": {
+      "type": "object",
+      "defaultValue": {
+        "workload": "foundry-hackathon",
+        "environment": "demo"
+      },
+      "metadata": {
+        "description": "Tags applied to all supported resources."
+      }
+    },
+    "storageAllowedIpAddress": {
+      "type": "string",
+      "defaultValue": "162.233.6.221",
+      "metadata": {
+        "description": "Public IPv4 address allowed through the Storage network security perimeter."
+      }
+    }
+  },
+  "variables": {
+    "normalizedPrefix": "[toLower(parameters('namingPrefix'))]",
+    "storagePrefix": "[replace(variables('normalizedPrefix'), '-', '')]",
+    "foundryAccountName": "[format('{0}-foundry-{1}', variables('normalizedPrefix'), parameters('resourceSuffix'))]",
+    "searchServiceName": "[format('{0}-search-{1}', variables('normalizedPrefix'), parameters('resourceSuffix'))]",
+    "storageAccountName": "[take(format('{0}st{1}', variables('storagePrefix'), parameters('resourceSuffix')), 24)]",
+    "searchConnectionName": "[format('search-{0}', parameters('resourceSuffix'))]",
+    "networkSecurityPerimeterName": "[format('{0}-nsp-{1}', variables('normalizedPrefix'), parameters('resourceSuffix'))]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "[format('storage-{0}', parameters('resourceSuffix'))]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "storageAccountName": {
+            "value": "[variables('storageAccountName')]"
+          },
+          "containerName": {
+            "value": "project-aurora"
+          },
+          "tags": {
+            "value": "[parameters('tags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.46.1.21595",
+              "templateHash": "16420712652897475649"
+            }
+          },
+          "parameters": {
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Azure region for the Storage account."
+              }
+            },
+            "storageAccountName": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 24,
+              "metadata": {
+                "description": "Globally unique Storage account name."
+              }
+            },
+            "containerName": {
+              "type": "string",
+              "metadata": {
+                "description": "Blob container name."
+              }
+            },
+            "tags": {
+              "type": "object",
+              "metadata": {
+                "description": "Tags applied to the Storage account."
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Storage/storageAccounts",
+              "apiVersion": "2025-01-01",
+              "name": "[parameters('storageAccountName')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "kind": "StorageV2",
+              "identity": {
+                "type": "SystemAssigned"
+              },
+              "sku": {
+                "name": "Standard_LRS"
+              },
+              "properties": {
+                "accessTier": "Hot",
+                "allowBlobPublicAccess": false,
+                "allowCrossTenantReplication": false,
+                "allowSharedKeyAccess": false,
+                "defaultToOAuthAuthentication": true,
+                "minimumTlsVersion": "TLS1_2",
+                "publicNetworkAccess": "SecuredByPerimeter",
+                "supportsHttpsTrafficOnly": true,
+                "networkAcls": {
+                  "bypass": "None",
+                  "defaultAction": "Deny"
+                }
+              }
+            },
+            {
+              "type": "Microsoft.Storage/storageAccounts/blobServices",
+              "apiVersion": "2025-01-01",
+              "name": "[format('{0}/{1}', parameters('storageAccountName'), 'default')]",
+              "properties": {
+                "deleteRetentionPolicy": {
+                  "enabled": true,
+                  "days": 7
+                },
+                "containerDeleteRetentionPolicy": {
+                  "enabled": true,
+                  "days": 7
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
+              "apiVersion": "2025-01-01",
+              "name": "[format('{0}/{1}/{2}', parameters('storageAccountName'), 'default', parameters('containerName'))]",
+              "properties": {
+                "publicAccess": "None"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts/blobServices', parameters('storageAccountName'), 'default')]"
+              ]
+            }
+          ],
+          "outputs": {
+            "storageAccountId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]"
+            },
+            "storageAccountName": {
+              "type": "string",
+              "value": "[parameters('storageAccountName')]"
+            },
+            "containerName": {
+              "type": "string",
+              "value": "[parameters('containerName')]"
+            },
+            "containerUrl": {
+              "type": "string",
+              "value": "[format('{0}{1}', reference(resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')), '2025-01-01').primaryEndpoints.blob, parameters('containerName'))]"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "[format('search-{0}', parameters('resourceSuffix'))]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "searchServiceName": {
+            "value": "[variables('searchServiceName')]"
+          },
+          "searchSkuName": {
+            "value": "[parameters('searchSkuName')]"
+          },
+          "semanticSearch": {
+            "value": "[parameters('semanticSearch')]"
+          },
+          "tags": {
+            "value": "[parameters('tags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.46.1.21595",
+              "templateHash": "6565046334032518922"
+            }
+          },
+          "parameters": {
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Azure region for Azure AI Search."
+              }
+            },
+            "searchServiceName": {
+              "type": "string",
+              "metadata": {
+                "description": "Globally unique Azure AI Search service name."
+              }
+            },
+            "searchSkuName": {
+              "type": "string",
+              "metadata": {
+                "description": "Azure AI Search SKU."
+              }
+            },
+            "semanticSearch": {
+              "type": "string",
+              "metadata": {
+                "description": "Semantic Search billing plan."
+              }
+            },
+            "tags": {
+              "type": "object",
+              "metadata": {
+                "description": "Tags applied to Azure AI Search."
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Search/searchServices",
+              "apiVersion": "2025-05-01",
+              "name": "[parameters('searchServiceName')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "identity": {
+                "type": "SystemAssigned"
+              },
+              "sku": {
+                "name": "[parameters('searchSkuName')]"
+              },
+              "properties": {
+                "disableLocalAuth": true,
+                "encryptionWithCmk": {
+                  "enforcement": "Disabled"
+                },
+                "hostingMode": "Default",
+                "networkRuleSet": {
+                  "bypass": "None",
+                  "ipRules": []
+                },
+                "partitionCount": 1,
+                "publicNetworkAccess": "Enabled",
+                "replicaCount": 1,
+                "semanticSearch": "[parameters('semanticSearch')]"
+              }
+            }
+          ],
+          "outputs": {
+            "searchServiceId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Search/searchServices', parameters('searchServiceName'))]"
+            },
+            "searchServiceName": {
+              "type": "string",
+              "value": "[parameters('searchServiceName')]"
+            },
+            "searchServiceEndpoint": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Search/searchServices', parameters('searchServiceName')), '2025-05-01').endpoint]"
+            },
+            "searchServiceLocation": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Search/searchServices', parameters('searchServiceName')), '2025-05-01', 'full').location]"
+            },
+            "searchPrincipalId": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Search/searchServices', parameters('searchServiceName')), '2025-05-01', 'full').identity.principalId]"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "[format('foundry-{0}', parameters('resourceSuffix'))]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "accountName": {
+            "value": "[variables('foundryAccountName')]"
+          },
+          "location": {
+            "value": "[parameters('foundryLocation')]"
+          },
+          "projectName": {
+            "value": "[parameters('projectName')]"
+          },
+          "searchConnectionName": {
+            "value": "[variables('searchConnectionName')]"
+          },
+          "searchServiceId": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', format('search-{0}', parameters('resourceSuffix'))), '2025-04-01').outputs.searchServiceId.value]"
+          },
+          "searchServiceEndpoint": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', format('search-{0}', parameters('resourceSuffix'))), '2025-04-01').outputs.searchServiceEndpoint.value]"
+          },
+          "searchServiceLocation": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', format('search-{0}', parameters('resourceSuffix'))), '2025-04-01').outputs.searchServiceLocation.value]"
+          },
+          "gpt5MiniModelVersion": {
+            "value": "[parameters('gpt5MiniModelVersion')]"
+          },
+          "gpt5MiniDeploymentSku": {
+            "value": "[parameters('gpt5MiniDeploymentSku')]"
+          },
+          "gpt5MiniCapacity": {
+            "value": "[parameters('gpt5MiniCapacity')]"
+          },
+          "embeddingModelVersion": {
+            "value": "[parameters('embeddingModelVersion')]"
+          },
+          "embeddingDeploymentSku": {
+            "value": "[parameters('embeddingDeploymentSku')]"
+          },
+          "embeddingCapacity": {
+            "value": "[parameters('embeddingCapacity')]"
+          },
+          "tags": {
+            "value": "[parameters('tags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.46.1.21595",
+              "templateHash": "3503382295387688884"
+            }
+          },
+          "parameters": {
+            "accountName": {
+              "type": "string",
+              "metadata": {
+                "description": "Microsoft Foundry account name."
+              }
+            },
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Azure region for the Foundry account and project."
+              }
+            },
+            "projectName": {
+              "type": "string",
+              "metadata": {
+                "description": "Name of the default Foundry project."
+              }
+            },
+            "searchConnectionName": {
+              "type": "string",
+              "metadata": {
+                "description": "Name of the project connection to Azure AI Search."
+              }
+            },
+            "searchServiceId": {
+              "type": "string",
+              "metadata": {
+                "description": "Resource ID of Azure AI Search."
+              }
+            },
+            "searchServiceEndpoint": {
+              "type": "string",
+              "metadata": {
+                "description": "Endpoint of Azure AI Search."
+              }
+            },
+            "searchServiceLocation": {
+              "type": "string",
+              "metadata": {
+                "description": "Region of Azure AI Search."
+              }
+            },
+            "gpt5MiniModelVersion": {
+              "type": "string",
+              "metadata": {
+                "description": "Model version for gpt-5-mini."
+              }
+            },
+            "gpt5MiniDeploymentSku": {
+              "type": "string",
+              "metadata": {
+                "description": "Deployment SKU for gpt-5-mini."
+              }
+            },
+            "gpt5MiniCapacity": {
+              "type": "int",
+              "metadata": {
+                "description": "Deployment capacity for gpt-5-mini."
+              }
+            },
+            "embeddingModelVersion": {
+              "type": "string",
+              "metadata": {
+                "description": "Model version for text-embedding-3-large."
+              }
+            },
+            "embeddingDeploymentSku": {
+              "type": "string",
+              "metadata": {
+                "description": "Deployment SKU for text-embedding-3-large."
+              }
+            },
+            "embeddingCapacity": {
+              "type": "int",
+              "metadata": {
+                "description": "Deployment capacity for text-embedding-3-large."
+              }
+            },
+            "tags": {
+              "type": "object",
+              "metadata": {
+                "description": "Tags applied to Foundry resources."
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.CognitiveServices/accounts",
+              "apiVersion": "2025-06-01",
+              "name": "[parameters('accountName')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "kind": "AIServices",
+              "identity": {
+                "type": "SystemAssigned"
+              },
+              "sku": {
+                "name": "S0"
+              },
+              "properties": {
+                "allowProjectManagement": true,
+                "customSubDomainName": "[parameters('accountName')]",
+                "defaultProject": "[parameters('projectName')]",
+                "disableLocalAuth": true,
+                "dynamicThrottlingEnabled": false,
+                "publicNetworkAccess": "Enabled",
+                "restrictOutboundNetworkAccess": false
+              }
+            },
+            {
+              "type": "Microsoft.CognitiveServices/accounts/projects",
+              "apiVersion": "2025-06-01",
+              "name": "[format('{0}/{1}', parameters('accountName'), parameters('projectName'))]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "identity": {
+                "type": "SystemAssigned"
+              },
+              "properties": {
+                "displayName": "[parameters('projectName')]",
+                "description": "Default project for the Microsoft Foundry hackathon environment."
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.CognitiveServices/accounts', parameters('accountName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.CognitiveServices/accounts/deployments",
+              "apiVersion": "2025-06-01",
+              "name": "[format('{0}/{1}', parameters('accountName'), 'gpt-5-mini')]",
+              "sku": {
+                "name": "[parameters('gpt5MiniDeploymentSku')]",
+                "capacity": "[parameters('gpt5MiniCapacity')]"
+              },
+              "properties": {
+                "model": {
+                  "format": "OpenAI",
+                  "name": "gpt-5-mini",
+                  "version": "[parameters('gpt5MiniModelVersion')]"
+                },
+                "versionUpgradeOption": "OnceNewDefaultVersionAvailable"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.CognitiveServices/accounts', parameters('accountName'))]",
+                "[resourceId('Microsoft.CognitiveServices/accounts/projects', parameters('accountName'), parameters('projectName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.CognitiveServices/accounts/deployments",
+              "apiVersion": "2025-06-01",
+              "name": "[format('{0}/{1}', parameters('accountName'), 'text-embedding-3-large')]",
+              "sku": {
+                "name": "[parameters('embeddingDeploymentSku')]",
+                "capacity": "[parameters('embeddingCapacity')]"
+              },
+              "properties": {
+                "model": {
+                  "format": "OpenAI",
+                  "name": "text-embedding-3-large",
+                  "version": "[parameters('embeddingModelVersion')]"
+                },
+                "versionUpgradeOption": "OnceNewDefaultVersionAvailable"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.CognitiveServices/accounts', parameters('accountName'))]",
+                "[resourceId('Microsoft.CognitiveServices/accounts/deployments', parameters('accountName'), 'gpt-5-mini')]"
+              ]
+            },
+            {
+              "type": "Microsoft.CognitiveServices/accounts/projects/connections",
+              "apiVersion": "2025-06-01",
+              "name": "[format('{0}/{1}/{2}', parameters('accountName'), parameters('projectName'), parameters('searchConnectionName'))]",
+              "properties": {
+                "category": "CognitiveSearch",
+                "target": "[parameters('searchServiceEndpoint')]",
+                "authType": "AAD",
+                "useWorkspaceManagedIdentity": true,
+                "isSharedToAll": true,
+                "metadata": {
+                  "ApiType": "Azure",
+                  "ResourceId": "[parameters('searchServiceId')]",
+                  "location": "[parameters('searchServiceLocation')]"
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.CognitiveServices/accounts/deployments', parameters('accountName'), 'text-embedding-3-large')]",
+                "[resourceId('Microsoft.CognitiveServices/accounts/projects', parameters('accountName'), parameters('projectName'))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "accountName": {
+              "type": "string",
+              "value": "[parameters('accountName')]"
+            },
+            "accountId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.CognitiveServices/accounts', parameters('accountName'))]"
+            },
+            "accountPrincipalId": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.CognitiveServices/accounts', parameters('accountName')), '2025-06-01', 'full').identity.principalId]"
+            },
+            "projectName": {
+              "type": "string",
+              "value": "[parameters('projectName')]"
+            },
+            "projectPrincipalId": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.CognitiveServices/accounts/projects', parameters('accountName'), parameters('projectName')), '2025-06-01', 'full').identity.principalId]"
+            },
+            "projectEndpoint": {
+              "type": "string",
+              "value": "[format('https://{0}.services.ai.azure.com/api/projects/{1}', parameters('accountName'), parameters('projectName'))]"
+            },
+            "gpt5MiniDeploymentName": {
+              "type": "string",
+              "value": "gpt-5-mini"
+            },
+            "embeddingDeploymentName": {
+              "type": "string",
+              "value": "text-embedding-3-large"
+            },
+            "searchConnectionId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.CognitiveServices/accounts/projects/connections', parameters('accountName'), parameters('projectName'), parameters('searchConnectionName'))]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', format('search-{0}', parameters('resourceSuffix')))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "[format('network-security-perimeter-{0}', parameters('resourceSuffix'))]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "networkSecurityPerimeterName": {
+            "value": "[variables('networkSecurityPerimeterName')]"
+          },
+          "profileName": {
+            "value": "storage"
+          },
+          "storageAssociationName": {
+            "value": "[format('storage-{0}', parameters('resourceSuffix'))]"
+          },
+          "storageAccountId": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', format('storage-{0}', parameters('resourceSuffix'))), '2025-04-01').outputs.storageAccountId.value]"
+          },
+          "allowedIpAddress": {
+            "value": "[parameters('storageAllowedIpAddress')]"
+          },
+          "allowedSubscriptionId": {
+            "value": "[subscription().id]"
+          },
+          "tags": {
+            "value": "[parameters('tags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.46.1.21595",
+              "templateHash": "10943993163043445668"
+            }
+          },
+          "parameters": {
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Azure region for the Network Security Perimeter."
+              }
+            },
+            "networkSecurityPerimeterName": {
+              "type": "string",
+              "metadata": {
+                "description": "Network Security Perimeter name."
+              }
+            },
+            "profileName": {
+              "type": "string",
+              "metadata": {
+                "description": "Network Security Perimeter profile name."
+              }
+            },
+            "storageAssociationName": {
+              "type": "string",
+              "metadata": {
+                "description": "Name of the Storage resource association."
+              }
+            },
+            "storageAccountId": {
+              "type": "string",
+              "metadata": {
+                "description": "Resource ID of the Storage account protected by the perimeter."
+              }
+            },
+            "allowedIpAddress": {
+              "type": "string",
+              "metadata": {
+                "description": "Public IPv4 address allowed to access Storage through the perimeter."
+              }
+            },
+            "allowedSubscriptionId": {
+              "type": "string",
+              "metadata": {
+                "description": "Subscription ARM ID allowed for Azure service-to-service traffic to Storage."
+              }
+            },
+            "tags": {
+              "type": "object",
+              "metadata": {
+                "description": "Tags applied to the Network Security Perimeter."
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Network/networkSecurityPerimeters",
+              "apiVersion": "2025-09-01",
+              "name": "[parameters('networkSecurityPerimeterName')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "properties": {}
+            },
+            {
+              "type": "Microsoft.Network/networkSecurityPerimeters/profiles",
+              "apiVersion": "2025-09-01",
+              "name": "[format('{0}/{1}', parameters('networkSecurityPerimeterName'), parameters('profileName'))]",
+              "properties": {},
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/networkSecurityPerimeters', parameters('networkSecurityPerimeterName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Network/networkSecurityPerimeters/profiles/accessRules",
+              "apiVersion": "2025-09-01",
+              "name": "[format('{0}/{1}/{2}', parameters('networkSecurityPerimeterName'), parameters('profileName'), 'allow-client-ip')]",
+              "properties": {
+                "direction": "Inbound",
+                "addressPrefixes": [
+                  "[format('{0}/32', parameters('allowedIpAddress'))]"
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/networkSecurityPerimeters/profiles', parameters('networkSecurityPerimeterName'), parameters('profileName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Network/networkSecurityPerimeters/profiles/accessRules",
+              "apiVersion": "2025-09-01",
+              "name": "[format('{0}/{1}/{2}', parameters('networkSecurityPerimeterName'), parameters('profileName'), 'allow-workload-subscription')]",
+              "properties": {
+                "direction": "Inbound",
+                "subscriptions": [
+                  {
+                    "id": "[parameters('allowedSubscriptionId')]"
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/networkSecurityPerimeters/profiles', parameters('networkSecurityPerimeterName'), parameters('profileName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Network/networkSecurityPerimeters/resourceAssociations",
+              "apiVersion": "2025-09-01",
+              "name": "[format('{0}/{1}', parameters('networkSecurityPerimeterName'), parameters('storageAssociationName'))]",
+              "properties": {
+                "accessMode": "Enforced",
+                "privateLinkResource": {
+                  "id": "[parameters('storageAccountId')]"
+                },
+                "profile": {
+                  "id": "[resourceId('Microsoft.Network/networkSecurityPerimeters/profiles', parameters('networkSecurityPerimeterName'), parameters('profileName'))]"
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/networkSecurityPerimeters/profiles/accessRules', parameters('networkSecurityPerimeterName'), parameters('profileName'), 'allow-client-ip')]",
+                "[resourceId('Microsoft.Network/networkSecurityPerimeters', parameters('networkSecurityPerimeterName'))]",
+                "[resourceId('Microsoft.Network/networkSecurityPerimeters/profiles', parameters('networkSecurityPerimeterName'), parameters('profileName'))]",
+                "[resourceId('Microsoft.Network/networkSecurityPerimeters/profiles/accessRules', parameters('networkSecurityPerimeterName'), parameters('profileName'), 'allow-workload-subscription')]"
+              ]
+            }
+          ],
+          "outputs": {
+            "networkSecurityPerimeterName": {
+              "type": "string",
+              "value": "[parameters('networkSecurityPerimeterName')]"
+            },
+            "profileId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Network/networkSecurityPerimeters/profiles', parameters('networkSecurityPerimeterName'), parameters('profileName'))]"
+            },
+            "storageAssociationId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Network/networkSecurityPerimeters/resourceAssociations', parameters('networkSecurityPerimeterName'), parameters('storageAssociationName'))]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', format('storage-{0}', parameters('resourceSuffix')))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "[format('rbac-{0}', parameters('resourceSuffix'))]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "storageAccountName": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', format('storage-{0}', parameters('resourceSuffix'))), '2025-04-01').outputs.storageAccountName.value]"
+          },
+          "storageAccountId": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', format('storage-{0}', parameters('resourceSuffix'))), '2025-04-01').outputs.storageAccountId.value]"
+          },
+          "searchServiceName": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', format('search-{0}', parameters('resourceSuffix'))), '2025-04-01').outputs.searchServiceName.value]"
+          },
+          "searchServiceId": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', format('search-{0}', parameters('resourceSuffix'))), '2025-04-01').outputs.searchServiceId.value]"
+          },
+          "searchPrincipalId": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', format('search-{0}', parameters('resourceSuffix'))), '2025-04-01').outputs.searchPrincipalId.value]"
+          },
+          "foundryAccountName": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', format('foundry-{0}', parameters('resourceSuffix'))), '2025-04-01').outputs.accountName.value]"
+          },
+          "foundryAccountId": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', format('foundry-{0}', parameters('resourceSuffix'))), '2025-04-01').outputs.accountId.value]"
+          },
+          "foundryAccountPrincipalId": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', format('foundry-{0}', parameters('resourceSuffix'))), '2025-04-01').outputs.accountPrincipalId.value]"
+          },
+          "foundryProjectPrincipalId": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', format('foundry-{0}', parameters('resourceSuffix'))), '2025-04-01').outputs.projectPrincipalId.value]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.46.1.21595",
+              "templateHash": "4692330143937289955"
+            }
+          },
+          "parameters": {
+            "storageAccountName": {
+              "type": "string",
+              "metadata": {
+                "description": "Storage account name."
+              }
+            },
+            "storageAccountId": {
+              "type": "string",
+              "metadata": {
+                "description": "Storage account resource ID."
+              }
+            },
+            "searchServiceName": {
+              "type": "string",
+              "metadata": {
+                "description": "Azure AI Search service name."
+              }
+            },
+            "searchServiceId": {
+              "type": "string",
+              "metadata": {
+                "description": "Azure AI Search resource ID."
+              }
+            },
+            "searchPrincipalId": {
+              "type": "string",
+              "metadata": {
+                "description": "Principal ID of the Azure AI Search system-assigned identity."
+              }
+            },
+            "foundryAccountName": {
+              "type": "string",
+              "metadata": {
+                "description": "Microsoft Foundry account name."
+              }
+            },
+            "foundryAccountId": {
+              "type": "string",
+              "metadata": {
+                "description": "Microsoft Foundry account resource ID."
+              }
+            },
+            "foundryAccountPrincipalId": {
+              "type": "string",
+              "metadata": {
+                "description": "Principal ID of the Foundry account system-assigned identity."
+              }
+            },
+            "foundryProjectPrincipalId": {
+              "type": "string",
+              "metadata": {
+                "description": "Principal ID of the Foundry project system-assigned identity."
+              }
+            }
+          },
+          "variables": {
+            "storageBlobDataReaderRoleId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '2a2b9908-6ea1-4ae2-8e65-a410df84e7d1')]",
+            "searchIndexDataContributorRoleId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '8ebe5a00-799e-43f5-93ac-243d3dce84a7')]",
+            "searchServiceContributorRoleId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7ca78c08-252a-4471-8644-bb5ff32d4ba0')]",
+            "cognitiveServicesOpenAIUserRoleId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '5e0bd9bd-7b93-4f28-af87-19fc36ad61bd')]",
+            "cognitiveServicesUserRoleId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'a97b65f3-24c7-4388-baec-2e87135dc908')]"
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]",
+              "name": "[guid(parameters('storageAccountId'), parameters('searchPrincipalId'), variables('storageBlobDataReaderRoleId'))]",
+              "properties": {
+                "principalId": "[parameters('searchPrincipalId')]",
+                "principalType": "ServicePrincipal",
+                "roleDefinitionId": "[variables('storageBlobDataReaderRoleId')]"
+              }
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[resourceId('Microsoft.CognitiveServices/accounts', parameters('foundryAccountName'))]",
+              "name": "[guid(parameters('foundryAccountId'), parameters('searchPrincipalId'), variables('cognitiveServicesOpenAIUserRoleId'))]",
+              "properties": {
+                "principalId": "[parameters('searchPrincipalId')]",
+                "principalType": "ServicePrincipal",
+                "roleDefinitionId": "[variables('cognitiveServicesOpenAIUserRoleId')]"
+              }
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[resourceId('Microsoft.CognitiveServices/accounts', parameters('foundryAccountName'))]",
+              "name": "[guid(parameters('foundryAccountId'), parameters('searchPrincipalId'), variables('cognitiveServicesUserRoleId'))]",
+              "properties": {
+                "principalId": "[parameters('searchPrincipalId')]",
+                "principalType": "ServicePrincipal",
+                "roleDefinitionId": "[variables('cognitiveServicesUserRoleId')]"
+              }
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[resourceId('Microsoft.Search/searchServices', parameters('searchServiceName'))]",
+              "name": "[guid(parameters('searchServiceId'), parameters('foundryAccountPrincipalId'), variables('searchIndexDataContributorRoleId'))]",
+              "properties": {
+                "principalId": "[parameters('foundryAccountPrincipalId')]",
+                "principalType": "ServicePrincipal",
+                "roleDefinitionId": "[variables('searchIndexDataContributorRoleId')]"
+              }
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[resourceId('Microsoft.Search/searchServices', parameters('searchServiceName'))]",
+              "name": "[guid(parameters('searchServiceId'), parameters('foundryAccountPrincipalId'), variables('searchServiceContributorRoleId'))]",
+              "properties": {
+                "principalId": "[parameters('foundryAccountPrincipalId')]",
+                "principalType": "ServicePrincipal",
+                "roleDefinitionId": "[variables('searchServiceContributorRoleId')]"
+              }
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[resourceId('Microsoft.Search/searchServices', parameters('searchServiceName'))]",
+              "name": "[guid(parameters('searchServiceId'), parameters('foundryProjectPrincipalId'), variables('searchIndexDataContributorRoleId'))]",
+              "properties": {
+                "principalId": "[parameters('foundryProjectPrincipalId')]",
+                "principalType": "ServicePrincipal",
+                "roleDefinitionId": "[variables('searchIndexDataContributorRoleId')]"
+              }
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[resourceId('Microsoft.Search/searchServices', parameters('searchServiceName'))]",
+              "name": "[guid(parameters('searchServiceId'), parameters('foundryProjectPrincipalId'), variables('searchServiceContributorRoleId'))]",
+              "properties": {
+                "principalId": "[parameters('foundryProjectPrincipalId')]",
+                "principalType": "ServicePrincipal",
+                "roleDefinitionId": "[variables('searchServiceContributorRoleId')]"
+              }
+            }
+          ]
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', format('foundry-{0}', parameters('resourceSuffix')))]",
+        "[resourceId('Microsoft.Resources/deployments', format('search-{0}', parameters('resourceSuffix')))]",
+        "[resourceId('Microsoft.Resources/deployments', format('storage-{0}', parameters('resourceSuffix')))]"
+      ]
+    }
+  ],
+  "outputs": {
+    "foundryAccountName": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', format('foundry-{0}', parameters('resourceSuffix'))), '2025-04-01').outputs.accountName.value]"
+    },
+    "foundryProjectName": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', format('foundry-{0}', parameters('resourceSuffix'))), '2025-04-01').outputs.projectName.value]"
+    },
+    "foundryProjectEndpoint": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', format('foundry-{0}', parameters('resourceSuffix'))), '2025-04-01').outputs.projectEndpoint.value]"
+    },
+    "gpt5MiniDeploymentName": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', format('foundry-{0}', parameters('resourceSuffix'))), '2025-04-01').outputs.gpt5MiniDeploymentName.value]"
+    },
+    "embeddingDeploymentName": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', format('foundry-{0}', parameters('resourceSuffix'))), '2025-04-01').outputs.embeddingDeploymentName.value]"
+    },
+    "searchServiceName": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', format('search-{0}', parameters('resourceSuffix'))), '2025-04-01').outputs.searchServiceName.value]"
+    },
+    "searchServiceEndpoint": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', format('search-{0}', parameters('resourceSuffix'))), '2025-04-01').outputs.searchServiceEndpoint.value]"
+    },
+    "searchConnectionId": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', format('foundry-{0}', parameters('resourceSuffix'))), '2025-04-01').outputs.searchConnectionId.value]"
+    },
+    "storageAccountName": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', format('storage-{0}', parameters('resourceSuffix'))), '2025-04-01').outputs.storageAccountName.value]"
+    },
+    "blobContainerName": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', format('storage-{0}', parameters('resourceSuffix'))), '2025-04-01').outputs.containerName.value]"
+    },
+    "blobContainerUrl": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', format('storage-{0}', parameters('resourceSuffix'))), '2025-04-01').outputs.containerUrl.value]"
+    },
+    "networkSecurityPerimeterName": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', format('network-security-perimeter-{0}', parameters('resourceSuffix'))), '2025-04-01').outputs.networkSecurityPerimeterName.value]"
+    },
+    "networkSecurityPerimeterProfileId": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', format('network-security-perimeter-{0}', parameters('resourceSuffix'))), '2025-04-01').outputs.profileId.value]"
+    },
+    "storagePerimeterAssociationId": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', format('network-security-perimeter-{0}', parameters('resourceSuffix'))), '2025-04-01').outputs.storageAssociationId.value]"
+    }
+  }
+}

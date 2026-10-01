@@ -1,0 +1,37 @@
+# Azure deployment workflow state and local planning artifacts
+.azure/
+
+# Generated ARM templates from Bicep builds
+/infra/main.json
+/infra/modules/*.json
+
+# Local or environment-specific deployment parameters
+*.local.bicepparam
+*.local.parameters.json
+
+# Environment files and credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Azure CLI and deployment logs
+*.log
+
+# Editor and IDE settings
+.vscode/
+.idea/
+*.suo
+*.user
+
+# Operating system files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*~

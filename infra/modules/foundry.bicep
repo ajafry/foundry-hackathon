@@ -10,6 +10,15 @@ param projectName string
 @description('Name of the project connection to Azure AI Search.')
 param searchConnectionName string
 
+@description('Name of the Application Insights monitoring connection.')
+param applicationInsightsConnectionName string
+
+@description('Resource ID of the Application Insights monitoring resource.')
+param applicationInsightsId string
+
+@description('Name of the Application Insights monitoring resource.')
+param applicationInsightsName string
+
 @description('Resource ID of Azure AI Search.')
 param searchServiceId string
 
@@ -77,6 +86,10 @@ resource project 'Microsoft.CognitiveServices/accounts/projects@2025-06-01' = {
   }
 }
 
+resource applicationInsights 'Microsoft.Insights/components@2020-02-02' existing = {
+  name: applicationInsightsName
+}
+
 resource gpt5MiniDeployment 'Microsoft.CognitiveServices/accounts/deployments@2025-06-01' = {
   parent: account
   name: 'gpt-5-mini'
@@ -137,6 +150,27 @@ resource searchConnection 'Microsoft.CognitiveServices/accounts/projects/connect
   ]
 }
 
+resource accountApplicationInsightsConnection 'Microsoft.CognitiveServices/accounts/connections@2025-06-01' = {
+  parent: account
+  name: applicationInsightsConnectionName
+  properties: {
+    category: 'AppInsights'
+    target: applicationInsightsId
+    #disable-next-line BCP036
+    authType: 'ProjectManagedIdentity'
+    useWorkspaceManagedIdentity: true
+    isSharedToAll: true
+    metadata: {
+      ApiType: 'Azure'
+      ApplicationInsightsConnectionString: applicationInsights.properties.ConnectionString
+      ResourceId: applicationInsightsId
+    }
+  }
+  dependsOn: [
+    searchConnection
+  ]
+}
+
 output accountName string = account.name
 output accountId string = account.id
 output accountPrincipalId string = account.identity.principalId
@@ -146,3 +180,10 @@ output projectEndpoint string = 'https://${account.name}.services.ai.azure.com/a
 output gpt5MiniDeploymentName string = gpt5MiniDeployment.name
 output embeddingDeploymentName string = embeddingDeployment.name
 output searchConnectionId string = searchConnection.id
+output accountApplicationInsightsConnectionId string = accountApplicationInsightsConnection.id
+output projectApplicationInsightsConnectionId string = resourceId(
+  'Microsoft.CognitiveServices/accounts/projects/connections',
+  account.name,
+  project.name,
+  applicationInsightsConnectionName
+)
